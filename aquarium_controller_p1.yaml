@@ -1,0 +1,428 @@
+substitutions:
+  # name for ESP Home
+  name: "aquarium-controller-p1"
+  friendly_name: "SHD Aquarium Controller-P1"
+  project_name: "SmartHomeDesign.AquariumController-P1"
+  project_version: "1.0.0"
+  
+  controller_name: "Aquarium" # replace this with your controller name
+  liquid_1: "Fertilizer"      # replace this with your fertrilizer name
+
+esphome:
+  name: "${name}"
+  name_add_mac_suffix: true
+  project:
+    name: "${project_name}"
+    version: "${project_version}"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+external_components:
+  - source: github://hostcc/esphome-component-dynamic-on-time # @hostcc many thanks for the component
+    components: [ dynamic_on_time ]
+
+dashboard_import:
+  package_import_url: github://smarthomedesign/aquarium_controller_p1/aquarium_controller_p1.yaml@release_1.0.0
+  import_full_config: false
+
+# Enable logging
+logger:
+  level: INFO
+
+# Enable Home Assistant API
+api:
+  reboot_timeout: 0s
+
+ota:
+
+wifi:
+  reboot_timeout: 0s
+  ap: {}
+
+captive_portal:
+
+improv_serial:
+
+esp32_improv:
+  authorizer: none
+
+web_server:
+  port: 80
+  auth:
+    username: !secret web_server_username
+    password: !secret web_server_password
+  log: true
+  
+globals:
+ # DO NOT CHANGE THIS
+  # liquid_1
+  - id: liquid_1_dose_today
+    type: boolean
+    initial_value: 'false'
+    restore_value: true
+  - id: liquid_1_total_dosed
+    type: float
+    initial_value: '0'
+    restore_value: true
+  #---------------------------
+
+switch:
+  - platform: gpio
+    pin: GPIO16
+    id: liquid_1_pump
+    name: "${liquid_1} Pump"
+    icon: "mdi:water-pump"
+    on_turn_on:
+      then:
+        - switch.turn_on: liquid_1_pump
+    on_turn_off:
+      then:
+        - switch.turn_off: liquid_1_pump
+    entity_category: config
+  
+# liquid_1 days scheduler
+  - platform: template
+    id: liquid_1_scheduler
+    name: "${liquid_1} Scheduler"
+    icon: "mdi:calendar-today"
+    optimistic: true
+    # inverted: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      then:
+        - logger.log: 
+            level: INFO
+            format: "Set ${liquid_1} scheduler ON"
+        - switch.turn_off: liquid_1_scheduler_is_disable
+    on_turn_off:
+      then:
+        - logger.log: 
+            level: INFO
+            format: "Set ${liquid_1} scheduler OFF"
+        - switch.turn_on: liquid_1_scheduler_is_disable        
+  
+  - platform: template
+    id: liquid_1_scheduler_is_disable
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    internal: True
+
+  - platform: template
+    id: liquid_1_day_1
+    name: "${liquid_1} Monday"
+    icon: "mdi:calendar-today"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: template
+    id: liquid_1_day_2
+    name: "${liquid_1} Tuesday"
+    icon: "mdi:calendar-today"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: template
+    id: liquid_1_day_3
+    name: "${liquid_1} Wednesday"
+    icon: "mdi:calendar-today"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: template
+    id: liquid_1_day_4
+    name: "${liquid_1} Thursday"
+    icon: "mdi:calendar-today"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: template
+    id: liquid_1_day_5
+    name: "${liquid_1} Friday"
+    icon: "mdi:calendar-today"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: template
+    id: liquid_1_day_6
+    name: "${liquid_1} Saturday"
+    icon: "mdi:calendar-today"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: template
+    id: liquid_1_day_7
+    name: "${liquid_1} Sunday"
+    icon: "mdi:calendar-today"
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+# -------------
+
+number:
+  # liquid_1
+  - platform: template
+    id: liquid_1_set_ml
+    name: ${liquid_1} Dossing
+    min_value: 1
+    max_value: 100
+    initial_value: 1
+    icon: "mdi:water-percent"
+    step: 0.5
+    optimistic: true
+    mode: box
+    restore_value: true
+    unit_of_measurement: "ml"
+    device_class: "water"
+    
+  - platform: template
+    id: liquid_1_dosing_hour
+    name: ${liquid_1} Hour (0-23)
+    icon: "mdi:hours-24"
+    min_value: 0
+    max_value: 23
+    initial_value: 0
+    step: 1
+    optimistic: true
+    mode: box
+    restore_value: true
+    unit_of_measurement: "hour"
+    device_class: "duration"
+
+  - platform: template
+    id: liquid_1_dosing_minute
+    name: ${liquid_1} Minute (0-59)
+    min_value: 0
+    max_value: 59
+    initial_value: 1
+    step: 1
+    optimistic: true
+    mode: box
+    restore_value: true
+    unit_of_measurement: "minute"
+    device_class: "duration"
+
+  - platform: template
+    id: liquid_1_calibration_dose
+    name: ${liquid_1} Calibration
+    icon: "mdi:hydraulic-oil-level"
+    min_value: 1
+    max_value: 60
+    initial_value: 6.2
+    entity_category: config
+    step: 0.01
+    optimistic: true
+    mode: box
+    restore_value: true
+    unit_of_measurement: "ml/minute"
+    device_class: "water"
+
+  - platform: template
+    id: liquid_1_bottle_size
+    name: ${liquid_1} Bottle size
+    icon: "mdi:bottle-soda"
+    min_value: 1
+    max_value: 2000
+    initial_value: 500
+    entity_category: config
+    step: 1
+    optimistic: true
+    mode: box
+    restore_value: true
+    unit_of_measurement: "ml"
+    device_class: "water"
+  #---------------------------------
+
+  
+button:
+  # liquid_1
+  - platform: template
+    name: "${liquid_1} Dose now"
+    id: "liquid_1_dose_now"
+    icon: "mdi:play"
+    on_press:
+      - logger.log: 
+          level: INFO
+          format: "Dose now"
+      - script.execute: liquid_1_dose
+
+
+  - platform: template
+    name: "${liquid_1} Stop dose"
+    id: "liquid_1_stop_dose"
+    icon: "mdi:stop"
+    on_press:
+      - script.execute: liquid_1_dose_stop
+
+  - platform: template
+    name: "${liquid_1} Reset autodose"
+    id: "liquid_1_dose_false"
+    icon: "mdi:lock-reset"
+    on_press:
+      - globals.set:
+          id: liquid_1_dose_today
+          value: "false"
+      - logger.log: 
+          level: INFO
+          format: "Autodose for today restarted."
+    entity_category: config
+  
+  - platform: template
+    name: "${liquid_1} Reset consumption"
+    id: "liquid_1_reset_consumption"
+    icon: "mdi:arrow-collapse-down"
+    on_press:
+      - globals.set:
+          id: liquid_1_total_dosed
+          value: '0'
+      # - logger.log: 
+      #     level: INFO
+      #     format: "Reset ${liquid_1} total consumtion to %0.1f"
+      #     args: ['id(liquid_1_bottle_size).state']
+    entity_category: config
+  
+
+  - platform: template
+    name: "${liquid_1} Start Calibration"
+    id: "liquid_1_calibration_button"
+    icon: "mdi:clock-start"
+    on_press:
+      - script.execute: liquid_1_start_calibration
+    entity_category: config
+  #---------------------------
+
+time:
+  - platform: sntp
+    id: sntp_time
+    on_time:
+      # reset dosing for the current day after midnight each day of the week
+      - seconds: 0
+        minutes: 0
+        hours: 0
+        then:
+          - globals.set:
+              id: liquid_1_dose_today
+              value: "false" 
+dynamic_on_time:
+  # scheduler for liquid_1
+  - id: liquid_1_schedule
+    rtc: sntp_time
+    hour: liquid_1_dosing_hour
+    minute: liquid_1_dosing_minute
+    mon: liquid_1_day_1
+    tue: liquid_1_day_2
+    wed: liquid_1_day_3
+    thu: liquid_1_day_4
+    fri: liquid_1_day_5
+    sat: liquid_1_day_6
+    sun: liquid_1_day_7
+    disabled: liquid_1_scheduler_is_disable
+    on_time:
+      - logger.log:
+          format: 'schedule: Starting dosing base on scheduler for ${liquid_1}.'
+          tag: scheduler_dosing
+          level: 'INFO'
+      - script.execute: liquid_1_dose
+  #------------------------------
+  
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: ${controller_name} IP Address
+      icon: mdi:ip-network
+
+  # - platform: template
+  #   name: "Current time"
+  #   id: current_time
+  #   icon: "mdi:timelapse"
+  #   lambda: |-
+  #             char str[9];
+  #             time_t currTime = id(sntp_time).now().timestamp;
+  #             strftime(str, sizeof(str), "%H:%M:%S", localtime(&currTime));
+  #             return  { str };
+  #   update_interval: 1s
+
+  # liquid_1
+  - platform: template
+    id: if_liquid_1_dose_today
+    name: ${liquid_1} Dosed today
+    lambda: 
+        if (id(liquid_1_dose_today) == true)
+        {
+          return {"YES"};  
+        }else{
+          return {"NO"};
+        }
+    update_interval: 1s
+
+  - platform: template
+    name: "${liquid_1} remaining"
+    id: "liquid_1_bottle_remaining"
+    icon: "mdi:battery-60"
+    lambda: 
+        float value;
+        std::string return_string;
+        value = id(liquid_1_bottle_size).state - id(liquid_1_total_dosed);
+        return_string = str_sprintf("%.1f", value) + " ml";
+        return return_string;
+    update_interval: 1s
+ #-------------------------------
+
+sensor:
+  # Reports the WiFi signal strength/RSSI in dB
+  - platform: wifi_signal 
+    # name: "WiFi Signal dB"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+    internal: true
+  # Reports the WiFi signal strength in %
+  - platform: copy 
+    source_id: wifi_signal_db
+    name: "${controller_name} WiFi"
+    id: "${controller_name}_WiFi"
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+    unit_of_measurement: "Signal %"
+    entity_category: "diagnostic"
+  - platform: uptime
+    name: ${controller_name} Uptime
+
+script:
+  # liquid_1
+  - id: liquid_1_dose
+    then:
+      - logger.log: 
+          level: INFO
+          format: "START ${liquid_1} dosing script."
+      - switch.turn_on: liquid_1_pump 
+      - delay: !lambda "return round(round(id(liquid_1_set_ml).state/(id(liquid_1_calibration_dose).state/60)) * 1000);"
+      - switch.turn_off: liquid_1_pump 
+      - globals.set:
+          id: liquid_1_dose_today
+          value: "true"
+      # - logger.log: 
+      #     level: INFO
+      #     format: "total_dose %.1f and set_ml %.1f"
+      #     args: ['id(liquid_1_total_dosed)', 'id(liquid_1_set_ml).state']
+      - lambda: !lambda |-
+                  float total_consumption;
+                  total_consumption = (id(liquid_1_total_dosed) + id(liquid_1_set_ml).state);
+                  id(liquid_1_total_dosed) = total_consumption;
+      - logger.log: 
+          level: INFO
+          format: "STOP ${liquid_1} dosing script."
+  
+  - id: liquid_1_dose_stop
+    then:
+      - script.stop: liquid_1_dose
+      - switch.turn_off: liquid_1_pump
+  # calibration is set to run 60s in order to see how much liquid will pump
+  # base on that liquid will set the calibration option in ml/ 60s
+  - id: liquid_1_start_calibration
+    then:
+      - logger.log: 
+          level: INFO
+          format: "Calibration for ${liquid_1} started..."
+      - switch.turn_on: liquid_1_pump 
+      - delay: 60s
+      - switch.turn_off: liquid_1_pump 
+      - logger.log: 
+          level: INFO
+          format: "Calibration for ${liquid_1} DONE."
+  #----------------------
